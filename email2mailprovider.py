@@ -10,6 +10,21 @@ import click
 from concurrent.futures import ThreadPoolExecutor 
 
 
+def cache(func):
+    _cache = dict() # YOLO locking, i don't care about race conditions
+
+    @functools.wraps(func)
+    def _cached_func(*args):
+        if args in _cache:
+            return _cache[args]
+        else:
+            res = func(*args)
+            _cache[args] = res
+            return res
+
+    return _cached_func
+
+
 def retry(exception, retries=3):
     def decorator(f):
         @functools.wraps(f)
@@ -43,6 +58,7 @@ def company_domain(domain):
         return '.'.join(domain.split('.')[-3:])
 
 
+@cache
 @retry(dns.resolver.Timeout)
 def resolve(domain):
     try:
